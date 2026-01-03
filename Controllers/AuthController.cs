@@ -3,12 +3,16 @@ using AuthWebAPI.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace AuthWebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController(IConfiguration configuration) : ControllerBase
     {
         public static User user = new();
 
@@ -38,8 +42,35 @@ namespace AuthWebAPI.Controllers
             {
                 return BadRequest("Wrong password."); //delete later, for testing
             }
-            string token = "success";
+            var token = CreateToken(user);
             return Ok(token);
         }
+
+        private string CreateToken(User user)
+        {
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+
+            // the jwt secret key to verify its a legit token, untampered
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
+
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512); //because of the algorithm choice (HmacSha512), our token needs to be minimum 512 bits long (aka 64 char)
+
+            // the body (aka payload) of the jwt
+            var tokenDescriptor = new JwtSecurityToken(
+                issuer: configuration.GetValue<string>("AppSettings:Issuer"), //configuration values are in the appsettings.json 
+                audience: configuration.GetValue<string>("AppSettings:Audience"),
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(1),
+                signingCredentials: creds
+            );
+
+            // serialises the jwt
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor); 
+        }
+
     }
 }

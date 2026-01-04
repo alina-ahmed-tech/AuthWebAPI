@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using AuthWebAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AuthWebAPI.Controllers
 {
@@ -35,6 +36,20 @@ namespace AuthWebAPI.Controllers
 
             return Ok(token);
         }
+
+    [Authorize]
+    [HttpGet]
+    public IActionResult AuthenticatedOnlyEndpoint()
+        {
+            return Ok("You are authenticated, you can access this.");
+        }    
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin-only")]
+    public IActionResult AdminOnlyEndpoint()
+        {
+            return Ok("You are authenticated, you can access this.");
+        }    
 
     }
 }
